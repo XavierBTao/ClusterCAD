@@ -133,7 +133,7 @@ class Cluster(models.Model):
         assert isinstance(active, bool)
         module = Module.objects.filter(subunit__cluster=self,
                                        subunit__name=sub).order_by('order')[mod]
-        domains = Domain.objects.filter(module=module).select_subclasses()
+        domains = Domain.objects.filter(container=module).select_subclasses()
         domain = list(filter(lambda x: repr(x) == dom, list(domains)))[0]
         domain.active = active
         domain.save()
@@ -143,9 +143,9 @@ class Cluster(models.Model):
         module = Module.objects.filter(subunit__cluster=self,
                                        subunit__name=sub).order_by('order')[mod]
         try:
-            domain = AT.objects.get(module=module)
+            domain = AT.objects.get(container=module)
         except AT.DoesNotExist:
-            domain = CAL.objects.get(module=module)
+            domain = CAL.objects.get(container=module)
         domain.substrate = update
         domain.save()
 
@@ -153,18 +153,57 @@ class Cluster(models.Model):
         assert update in [x[0] for x in KR.TYPE_CHOICES]
         module = Module.objects.filter(subunit__cluster=self,
                                        subunit__name=sub).order_by('order')[mod]
-        domain = KR.objects.get(module=module)
+        domain = KR.objects.get(container=module)
         domain.type = update
         domain.save()
 
     def setCyclization(self, cyclic, ring=0):
         assert isinstance(cyclic, bool)
         assert isinstance(ring, int)
-        domain = TE.objects.get(module__subunit__cluster=self)
-        domain.cyclic = cyclic
-        if cyclic:
-            domain.ring = ring
-        domain.save()
+        #small modifications
+        print(self.__repr__)
+
+        cluster_modules = Module.objects.filter(subunit__cluster=self)
+        cluster_standalones = DomainContainingStandalone.objects.filter(cluster=self)
+        
+        #experimental code starts here
+        #TEs = ??? (some kind of list? Maybe a querySet? it is a querySet)
+        for module in cluster_modules:
+            has_te = False
+            try:
+                module_te = TE.objects.get(container=module)
+                if has_te:
+                    #throw error here because we have multiple TEs
+                    raise Exception("Multiple TEs found")
+                
+                # TE found
+                print("TE found in this module")
+                module_te.cyclic = cyclic
+                if cyclic:
+                    module_te.ring = ring
+                module_te.save()
+                has_te = True
+            except:
+                pass
+            if not has_te:
+                # maybe print out that there's no TE in this module? 
+                print("No TE found in this module")
+        
+        for standalone in cluster_standalones:
+            standalone_te = TE.objects.get(container=standalone)
+        
+        #TODO: does objects.get query a single object? Or a QuerySet? If the former
+        #catch error in querying for the standalones, else 
+        
+        #experimental code ends here
+        
+        #old code starts here
+        #domain = TE.objects.get(container__subunit__cluster=self)
+
+        #domain.cyclic = cyclic
+        #if cyclic:
+        #    domain.ring = ring
+        #domain.save()
 
     def clusterDict(self):
         '''Function that generates OrderedDict representation of changeable parameters
@@ -580,8 +619,26 @@ class CAL(Domain):
     )
 
     def operation(self, chain):
-        assert self.module.loading == True
+
+        #for now, assume that CALs are not loading (N-ACPs are)
+        
+        #assert self.module.loading == False
         return starters[self.substrate]
+
+        # everything below is experimental
+        #check if CAL is in a module or is a standalone, only process if it is in a module for now
+        # CAL -> domain -> domaincontainer
+        #cal_module = CAL.objects. (container=self)
+        #print(cal_module)
+        #print(self.object.__module__)
+        
+        # experimental code: if the "module" is indeed a module, then process as a module. 
+        # otherwise display error and don't process for now
+        #if(type(cal_module)==Module):
+        #    assert self.module.loading == True
+        #    return starters[self.substrate]
+        #else:
+        #    raise Exception("CAL is not in a module/is a standalone")
 
     def __str__(self):
         if self.module.iterations > 1:
@@ -610,7 +667,7 @@ class AT(Domain):
                                               '[O:4][C:5](=[O:6])[C@@:7][C:8](=[O:9])[S:10]>>'
                                               '[C:2](=[O:3])[C@:7][C:8](=[O:9])[S:10]'
                                               '.[C:5](=[O:4])(=[O:6])'))
-            assert KS in [type(domain) for domain in self.module.domains()]
+            assert KS in [type(domain) for domain in self.container.domains()]
             assert len(chain.GetSubstructMatches(chem.MolFromSmiles('CC(=O)S'),
                        useChirality=True)) == 1, chem.MolToSmiles(chain)
             prod = rxn.RunReactants((chain, extenders[self.substrate]))[0][0]
