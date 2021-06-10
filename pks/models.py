@@ -619,27 +619,43 @@ class CAL(Domain):
     )
 
     def operation(self, chain):
-
-        #for now, assume that CALs are not loading (N-ACPs are)
         
-        #assert self.module.loading == False
-        return starters[self.substrate]
+        try:
+            # module id = domaincontainer id because a module object is also the same domaincontainer object
+            cal_domaincontainer_id = self.container.domainContainerId 
+            cal_domaincontainer = Module.objects.get(domainContainerId=cal_module_id)
+            assert cal_module.loading == True
+            return starters[self.substrate]
+        except:
+            raise Exception("CAL is not in a module/is a standalone")
+
+        #was used to test if domaincontainerID would map to same module object
+        '''
+        print("module: "+str(cal_module))
+        print(cal_module.subunit)
+        print(cal_module.order)
+        print("domaincontainer: "+str(self.container))
+        '''
 
         # everything below is experimental
-        #check if CAL is in a module or is a standalone, only process if it is in a module for now
+        '''
+        # check if CAL is in a module or is a standalone, only process if it is in a module for now
         # CAL -> domain -> domaincontainer
-        #cal_module = CAL.objects. (container=self)
-        #print(cal_module)
-        #print(self.object.__module__)
+        cal_module = CAL.objects. (container=self)
+        print(cal_module)
+        print(self.object.__module__)
         
         # experimental code: if the "module" is indeed a module, then process as a module. 
         # otherwise display error and don't process for now
-        #if(type(cal_module)==Module):
-        #    assert self.module.loading == True
-        #    return starters[self.substrate]
-        #else:
-        #    raise Exception("CAL is not in a module/is a standalone")
-
+        
+        print(self.container)
+        
+        if(type(self.container)==Module):
+            assert self.module.loading == True
+            return starters[self.substrate]
+        else:
+            raise Exception("CAL is not in a module/is a standalone")
+        '''
     def __str__(self):
         if self.module.iterations > 1:
             return "substrate %s, %s, iterations %d" % (self.substrate, self.module.loadingStr(), self.module.iterations)
