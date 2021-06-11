@@ -115,8 +115,9 @@ def plot_heatmap(values, labels, mapping=None):
     plt.savefig(outputSVG, format="svg")
     return outputSVG.getvalue()
 
-subunits = pks.models.Subunit.objects.filter(accPlotFile='', ssPlotFile='')
-# add something where subunit needs to be found in acc20 and ss8
+# picks subunits to add based on the lack of accPlotFile and ssPlotFile
+# removes subunits that lack an ss8 or acc20 entry
+subunits = pks.models.Subunit.objects.filter(accPlotFile='', ssPlotFile='').exclude(ss8='', acc20='')
 
 # exit if everything has been plot already
 if len(subunits) == 0:
