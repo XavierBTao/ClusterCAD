@@ -621,13 +621,13 @@ class CAL(Domain):
     def operation(self, chain):
         
         try:
-            # module id = domaincontainer id because a module object is also the same domaincontainer object
+            # module can be fetched using domaincontainer id
             cal_domaincontainer_id = self.container.domainContainerId 
-            cal_domaincontainer = Module.objects.get(domainContainerId=cal_module_id)
+            cal_module = Module.objects.get(domainContainerId=cal_domaincontainer_id)
             assert cal_module.loading == True
             return starters[self.substrate]
         except:
-            raise Exception("CAL is not in a module/is a standalone")
+            raise Exception("CAL is not in a module/is in a standalone")
 
         #was used to test if domaincontainerID would map to same module object
         '''
@@ -637,7 +637,7 @@ class CAL(Domain):
         print("domaincontainer: "+str(self.container))
         '''
 
-        # everything below is experimental
+        # everything below is experimental and basically didn't work
         '''
         # check if CAL is in a module or is a standalone, only process if it is in a module for now
         # CAL -> domain -> domaincontainer
